@@ -1,0 +1,7 @@
+# reason: tofu hide loop
+5, -12
+2, -12
+3, -10
+5, -10
+# reason: avatar box interferes, though unsure of blocking as observed fight did not have issues
+7, -10
