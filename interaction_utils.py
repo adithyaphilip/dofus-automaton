@@ -264,6 +264,11 @@ def attempt_attack():
         click_pts = [pt for pt in click_pts if MAP_X_START_LIMIT <= pt[0] <= MAP_X_END_LIMIT
                      and MAP_Y_START_LIMIT < pt[1] < MAP_Y_END_LIMIT]
 
+        if len(click_pts) is None:
+            no_monster_ctr += 1
+            print("Found no clickable monsters!", file=sys.stderr)
+            continue
+
         # 3. perform a click based on max of min distance to points already denied
         next_click_pt = math_utils.get_max_min_dist_pt(choose_pt_list=click_pts, far_from_pt_list=denied_clicks)
         adb_utils.tap(x=next_click_pt[0], y=next_click_pt[1])
