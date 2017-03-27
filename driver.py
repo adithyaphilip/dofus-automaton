@@ -96,38 +96,36 @@ def handle_battle():
         # NOTE: This rect can only be re-used if we are not moving the avatar box
         end_turn_rect = image_utils.get_end_turn_if_is_turn()
         # if not your turn, try again
-        if end_turn_rect is None:
-            continue
+        if end_turn_rect is not None:
+            print("Our turn has begun!", file=sys.stderr)
+            turn_start_time = time.time()
+            # if you've reached here, it's your turn.
+            turn_ctr += 1
 
-        print("Our turn has begun!", file=sys.stderr)
-        turn_start_time = time.time()
-        # if you've reached here, it's your turn.
-        turn_ctr += 1
+            if turn_ctr % SPELL_LIVING_BAG_COOLDOWN == 1:
+                print("Casting living bag!", file=sys.stderr)
+                living_bag_success = interaction_utils.cast_spell_living_bag(cv_empty_box_rect)
+                print("Finished casting living bag!", living_bag_success, file=sys.stderr)
 
-        if turn_ctr % SPELL_LIVING_BAG_COOLDOWN == 1:
-            print("Casting living bag!", file=sys.stderr)
-            living_bag_success = interaction_utils.cast_spell_living_bag(cv_empty_box_rect)
-            print("Finished casting living bag!", living_bag_success, file=sys.stderr)
+            # Start firing
+            print("Casting coins, so far miss streak:", spell_coins_miss_streak, file=sys.stderr)
+            coins_was_cast = interaction_utils.cast_spell_coins_repeatedly(cv_empty_box_rect)
+            print("Finished casting coins:", coins_was_cast, spell_coins_miss_streak, file=sys.stderr)
 
-        # Start firing
-        print("Casting coins, so far miss streak:", spell_coins_miss_streak, file=sys.stderr)
-        coins_was_cast = interaction_utils.cast_spell_coins_repeatedly(cv_empty_box_rect)
-        print("Finished casting coins:", coins_was_cast, spell_coins_miss_streak, file=sys.stderr)
+            if not coins_was_cast:
+                spell_coins_miss_streak += 1
+            else:
+                spell_coins_miss_streak = 0
 
-        if not coins_was_cast:
-            spell_coins_miss_streak += 1
-        else:
-            spell_coins_miss_streak = 0
+            # the >= is if even the turn after we move we can't see the enemy
+            if spell_coins_miss_streak >= 2 and names.MONSTER_TOFU_NAME in map(lambda x: x[0], battle_avatars):
+                interaction_utils.battle_move_away_from_enemy(cv_empty_box_rect)
 
-        # the >= is if even the turn after we move we can't see the enemy
-        if spell_coins_miss_streak >= 2 and names.MONSTER_TOFU_NAME in map(lambda x: x[0], battle_avatars):
-            interaction_utils.battle_move_away_from_enemy(cv_empty_box_rect)
-
-        # End your turn. It is important to re-fetch. Death of enemy can change position.
-        # Remove the wait as we accidentally end our own turn due to the delay
-        end_turn_rect = image_utils.get_end_turn_if_is_turn()
-        if end_turn_rect is not None and time.time() - turn_start_time < TURN_TIME_LIMIT_SECONDS:
-            adb_utils.tap(*math_utils.get_rand_click_point(end_turn_rect))
+            # End your turn. It is important to re-fetch. Death of enemy can change position.
+            # Remove the wait as we accidentally end our own turn due to the delay
+            end_turn_rect = image_utils.get_end_turn_if_is_turn()
+            if end_turn_rect is not None and time.time() - turn_start_time < TURN_TIME_LIMIT_SECONDS:
+                adb_utils.tap(*math_utils.get_rand_click_point(end_turn_rect))
 
         battle_avatars = image_utils.get_battle_info()
 

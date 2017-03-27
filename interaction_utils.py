@@ -8,7 +8,7 @@ import random
 import sys
 
 MIN_MONSTER_LIMIT = 2
-MAX_MONSTER_LIMIT = 6
+MAX_MONSTER_LIMIT = 7
 
 MIN_ATTACK_TAP_DELAY = 0.3
 MAX_ATTACK_TAP_DELAY = 0.5
@@ -38,6 +38,11 @@ SWIPE_RND_OFFSET = 100
 SWIPE_WRONG_DIR_OFFSET = 80
 
 SPELL_COINS_CAST_TIMES_LIMIT = 3
+
+MAP_X_END_LIMIT = 1100
+MAP_X_START_LIMIT = 135
+MAP_Y_START_LIMIT = 130
+MAP_Y_END_LIMIT = 800
 
 
 def click_empty_box(empty_box_rect):
@@ -256,6 +261,8 @@ def attempt_attack():
 
         # 2. fetch random click points
         click_pts = [math_utils.get_rand_click_point(rect) for rect in tofu_rects]
+        click_pts = [pt for pt in click_pts if MAP_X_START_LIMIT <= pt[0] <= MAP_X_END_LIMIT
+                     and MAP_Y_START_LIMIT < pt[1] < MAP_Y_END_LIMIT]
 
         # 3. perform a click based on max of min distance to points already denied
         next_click_pt = math_utils.get_max_min_dist_pt(choose_pt_list=click_pts, far_from_pt_list=denied_clicks)
