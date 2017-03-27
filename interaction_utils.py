@@ -264,7 +264,7 @@ def attempt_attack():
         click_pts = [pt for pt in click_pts if MAP_X_START_LIMIT <= pt[0] <= MAP_X_END_LIMIT
                      and MAP_Y_START_LIMIT < pt[1] < MAP_Y_END_LIMIT]
 
-        if len(click_pts) is None:
+        if len(click_pts) == 0:
             no_monster_ctr += 1
             print("Found no clickable monsters!", file=sys.stderr)
             continue
