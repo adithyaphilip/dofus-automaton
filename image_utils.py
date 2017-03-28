@@ -32,10 +32,10 @@ THRESH_ATTACK_DIAG_CANCEL = 0.6
 THRESH_TOFU_POS = 0.83
 
 THRESH_BATTLE_AVATAR = 0.8
-THRESH_BATTLE_END_TURN = 0.98
-THRESH_BATTLE_READY = 0.98
-THRESH_BATTLE_SPELL_COINS = 0.98  # because of the red dot that appears in the emulator
-THRESH_BATTLE_SPELL_LIVING_BAG = 0.98  # because of the red dot that appears in the emulator
+THRESH_BATTLE_END_TURN = 0.9
+THRESH_BATTLE_READY = 0.9
+THRESH_BATTLE_SPELL_COINS = 0.9  # because of the red dot that appears in the emulator
+THRESH_BATTLE_SPELL_LIVING_BAG = 0.9  # because of the red dot that appears in the emulator
 THRESH_BATTLE_IN_RANGE_2 = 0.6
 THRESH_BATTLE_IN_RANGE_3 = 0.8
 THRESH_BATTLE_SPELL_RANGE_SQ = 0.8
