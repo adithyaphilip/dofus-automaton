@@ -11,7 +11,7 @@ import random
 import sys
 
 SPELL_LIVING_BAG_COOLDOWN = 6
-TURN_TIME_LIMIT_SECONDS = 18
+TURN_TIME_LIMIT_SECONDS = 20
 
 
 class Game:
@@ -75,7 +75,7 @@ def handle_battle():
     Handles a battle from the start, including clicking the ready button and closing the victory dialog
     :return:
     """
-    interaction_utils.click_ready(wait=True)
+    interaction_utils.click_ready(wait=True, timeout=5)
     t_battle_check = time.time()
     battle_needs_to_close = False
     print("Checking if battle!")
@@ -97,10 +97,10 @@ def handle_battle():
         end_turn_rect = image_utils.get_end_turn_if_is_turn()
         # if not your turn, try again
         if end_turn_rect is not None:
-            print("Our turn has begun!", file=sys.stderr)
             turn_start_time = time.time()
             # if you've reached here, it's your turn.
             turn_ctr += 1
+            print("Our turn has begun!", turn_ctr, file=sys.stderr)
 
             if turn_ctr % SPELL_LIVING_BAG_COOLDOWN == 1:
                 print("Casting living bag!", file=sys.stderr)
@@ -120,45 +120,64 @@ def handle_battle():
             # the >= is if even the turn after we move we can't see the enemy
             if spell_coins_miss_streak >= 2 and names.MONSTER_TOFU_NAME in map(lambda x: x[0], battle_avatars):
                 interaction_utils.battle_move_away_from_enemy(cv_empty_box_rect)
+            elif spell_coins_miss_streak >= 3:
+                interaction_utils.battle_move_away_from_enemy(cv_empty_box_rect)
 
             # End your turn. It is important to re-fetch. Death of enemy can change position.
-            # Remove the wait as we accidentally end our own turn due to the delay
+            # Remove the wait as we accidentally end our own turn due to the delay during which our next turn
+            # would start
             end_turn_rect = image_utils.get_end_turn_if_is_turn()
-            if end_turn_rect is not None and time.time() - turn_start_time < TURN_TIME_LIMIT_SECONDS:
+            if end_turn_rect is not None:
+                # if time.time() - turn_start_time < TURN_TIME_LIMIT_SECONDS:
                 adb_utils.tap(*math_utils.get_rand_click_point(end_turn_rect))
+                time.sleep(1)
 
         battle_avatars = image_utils.get_battle_info()
 
     # close the fight finished dialog box
     print("Closing fight dialog!")
     if battle_needs_to_close:
-        interaction_utils.close_diag(wait=True)
+        interaction_utils.close_diag(wait=True, timeout=5)
     # if there are any additional dialogs (e.g. level up), close them too
     print("Closing dialogs!")
     while interaction_utils.close_diag(wait=False):
         pass  # the function in the loop condition takes care of closing it, no-op here
-        # heal up before the next fight TODO: Disabled for now as fights are easy and inter-fight time is sufficient to heal
+        # heal up before the next fight
+        # TODO: Disabled for now as fights are easy and inter-fight time is sufficient to heal
         # print("Waiting to heal!")
         # interaction_utils.heal_fully()
         # print("Healed!")
+    # this is in case the clicking of "end turn" earlier accidentally started a fight
+    if image_utils.get_battle_info() is not None:
+        handle_battle()
 
 
 def start_automaton(start_x: int, start_y: int):
     # IMPORTANT: Make sure you set the starting x and y values correctly!
     # NOTE: The tofu corner x and y bounds have been reduced by 1 to accommodate for erroneous movements
-    game = Game(x=start_x, y=start_y, min_x=4, min_y=-11, max_x=6, max_y=-11)
+    game = Game(x=start_x, y=start_y, min_x=3, min_y=-12, max_x=7, max_y=-10)
     # game.go_battlefield()
+    # return
     while True:
+        # this is to
+        # a. handle accidental battle starts due to movement attempted at the end of this loop
+        # b. has added benefit of starting the automaton even if fight is already in ready screen
+        if image_utils.get_battle_info() is not None:
+            handle_battle()
+
         while interaction_utils.attempt_attack():
             # we have been taken to the "Ready" screen, hand it over to the fight handler
             handle_battle()
             # we have finished a battle, resume search
         # we have not been able to find a suitable fight on this map, move to the next
+        print("Moving to next map", file=sys.stderr)
         game.move_next_coords()
 
 
 def main():
-    start_automaton(start_x=4, start_y=-11)
+    # handle_battle()
+    # return
+    start_automaton(start_x=5, start_y=-10)
 
 
 if __name__ == '__main__':

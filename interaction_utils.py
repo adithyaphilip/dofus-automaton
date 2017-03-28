@@ -19,8 +19,8 @@ MIN_ATTACKS_DENIED = 4
 MAX_NO_MONSTER_FOUND = 6
 MIN_NO_MONSTER_FOUND = 4
 
-MAX_ATTACK_NOT_FOUND = 6
-MIN_ATTACK_NOT_FOUND = 5
+MAX_ATTACK_NOT_FOUND = 5
+MIN_ATTACK_NOT_FOUND = 4
 
 MAX_BATTLE_CHECK_TIMES = 5
 MAX_ACCIDENTAL_BATTLE_CHECK_TIMES = 2
@@ -34,8 +34,8 @@ MOVE_SLEEP_MIN = 12
 MOVE_SLEEP_MAX = 15
 
 SWIPE_MIN_OFFSET = 200
-SWIPE_RND_OFFSET = 100
-SWIPE_WRONG_DIR_OFFSET = 80
+SWIPE_RND_OFFSET = 20
+SWIPE_WRONG_DIR_OFFSET = 20
 
 SPELL_COINS_CAST_TIMES_LIMIT = 3
 
@@ -43,6 +43,7 @@ MAP_X_END_LIMIT = 1100
 MAP_X_START_LIMIT = 135
 MAP_Y_START_LIMIT = 130
 MAP_Y_END_LIMIT = 800
+MIN_MISSED_PT_DIST_PIXELS = 4
 
 
 def click_empty_box(empty_box_rect):
@@ -139,6 +140,7 @@ def cast_spell_living_bag(empty_box_rect):
     click_pt = math_utils.get_min_avg_dist_pt([math_utils.get_rand_click_point(rect) for rect in rects])
     adb_utils.tap(*click_pt)
     adb_utils.tap(*click_pt)
+    return True
 
 
 def heal_fully():
@@ -150,14 +152,19 @@ def heal_fully():
         pass
 
 
-def close_diag(wait: bool):
+def close_diag(wait: bool, timeout: float = None):
     """
 
+    :param wait: if True will block until a dialog has been detected and a close attemoted
+    :param timeout: specifies the time period for which to block
     :return: True if was able to detect close dialog button and attempted to click it, false otherwise
     """
+    start_time = time.time()
     close_diag_rect = image_utils.get_close_diag_btn()
     if wait:
         while close_diag_rect is None:
+            if timeout is not None and time.time() - start_time > timeout:
+                break
             close_diag_rect = image_utils.get_close_diag_btn()
 
     if close_diag_rect is None:
@@ -167,14 +174,17 @@ def close_diag(wait: bool):
     return True
 
 
-def click_ready(wait: bool):
+def click_ready(wait: bool, timeout: float = None):
     """
 
     :return: True if was able to detect ready button and attempted to click it, false otherwise
     """
+    start_time = time.time()
     ready_rect = image_utils.get_ready_button_if_battle()
     if wait:
         while ready_rect is None:
+            if timeout is not None and time.time() - start_time > timeout:
+                break
             ready_rect = image_utils.get_ready_button_if_battle()
 
     if ready_rect is None:
@@ -259,10 +269,12 @@ def attempt_attack():
 
         print("Found monsters:", len(tofu_rects))
 
-        # 2. fetch random click points
+        # 2. fetch random click points, if they're not too close to a miss
         click_pts = [math_utils.get_rand_click_point(rect) for rect in tofu_rects]
         click_pts = [pt for pt in click_pts if MAP_X_START_LIMIT <= pt[0] <= MAP_X_END_LIMIT
-                     and MAP_Y_START_LIMIT < pt[1] < MAP_Y_END_LIMIT]
+                     and MAP_Y_START_LIMIT < pt[1] < MAP_Y_END_LIMIT
+                     and min([100] + [math_utils.euclidean(*pt, *miss_pt) for miss_pt in missed_clicks])
+                     > MIN_MISSED_PT_DIST_PIXELS]
 
         if len(click_pts) == 0:
             no_monster_ctr += 1

@@ -1,5 +1,6 @@
 import names
 import math_utils
+import adb_utils
 
 import cv2
 import numpy as np
@@ -8,6 +9,7 @@ import subprocess
 import sys
 import math
 import random
+import time
 
 ORIG_HEIGHT = 900
 ORIG_WIDTH = 1440
@@ -91,7 +93,18 @@ battle_avatar_image_dict = {name: read_image(fname=fname, color=True)
 
 
 def fetch_screenshot(height: int, width: int, temp_fname: str, color: bool):
-    subprocess.call("adb exec-out screencap -p  2> /dev/null > %s" % temp_fname, shell=True)
+    while True:
+        try:
+            subprocess.call("adb exec-out screencap -p  2> /dev/null > %s" % temp_fname, shell=True,
+                            timeout=adb_utils.ADB_TIMEOUT_SECONDS)
+            # this is to prevent the error where adb freezes up for some reason and then fails
+            try:
+                read_image(fname=temp_fname, color=False)
+                break
+            except Exception:
+                continue
+        except Exception:
+            print("ADB TIMED OUT!!!! :O :O :O at", time.time(), "- trying again!", file=sys.stderr)
     subprocess.call("sips -z %d %d %s" % (height, width, temp_fname), shell=True)
     return read_image(temp_fname, color=color)
 
