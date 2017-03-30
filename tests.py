@@ -235,8 +235,8 @@ def main():
         # test_end_turn_detect(img_fname="test_files/battle_screen_2_attack_range.png")
         # test_end_turn_detect(img_fname=normal_image_lg)
         # test_movement(fname=movement_img)
-        # test_in_range(battle_range_img)
-        test_spell_range_empty_squares(battle_range_img)
+        test_in_range(battle_range_img)
+        # test_spell_range_empty_squares(battle_range_img)
 
 
 if __name__ == '__main__':

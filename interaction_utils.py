@@ -8,19 +8,19 @@ import random
 import sys
 
 MIN_MONSTER_LIMIT = 2
-MAX_MONSTER_LIMIT = 7
+MAX_MONSTER_LIMIT = 10
 
-MIN_ATTACK_TAP_DELAY = 0.3
-MAX_ATTACK_TAP_DELAY = 0.5
+MIN_ATTACK_TAP_DELAY = 0.1
+MAX_ATTACK_TAP_DELAY = 0.2
 
-MAX_ATTACKS_DENIED = 5
-MIN_ATTACKS_DENIED = 4
+MAX_ATTACKS_DENIED = 4
+MIN_ATTACKS_DENIED = 3
 
-MAX_NO_MONSTER_FOUND = 6
-MIN_NO_MONSTER_FOUND = 4
+MAX_NO_MONSTER_FOUND = 4
+MIN_NO_MONSTER_FOUND = 3
 
-MAX_ATTACK_NOT_FOUND = 5
-MIN_ATTACK_NOT_FOUND = 4
+MAX_ATTACK_NOT_FOUND = 4
+MIN_ATTACK_NOT_FOUND = 3
 
 MAX_BATTLE_CHECK_TIMES = 5
 MAX_ACCIDENTAL_BATTLE_CHECK_TIMES = 2
@@ -36,8 +36,6 @@ MOVE_SLEEP_MAX = 15
 SWIPE_MIN_OFFSET = 200
 SWIPE_RND_OFFSET = 20
 SWIPE_WRONG_DIR_OFFSET = 20
-
-SPELL_COINS_CAST_TIMES_LIMIT = 3
 
 MAP_X_END_LIMIT = 1100
 MAP_X_START_LIMIT = 135
@@ -79,17 +77,19 @@ def battle_move_away_from_enemy(empty_box_rect):
     return True
 
 
-def cast_spell_coins_repeatedly(empty_box_rect):
+def cast_spell_coins_repeatedly(empty_box_rect, max_casts: int, preferred_rect: tuple = None):
     """
     clicks on an empty box, then the coins spell, casts if enemies in range.
+    :param max_casts:
+    :param preferred_rect:
     :param empty_box_rect:
-    :return: True if the spell was successfully cast even once, False otherwise
+    :return: True if the spell was successfully cast even once, False otherwise, and the rect of the last guy attacked
     """
 
     spell_rect = image_utils.get_spell_coins()
-    chosen_rect = None
+    chosen_rect = preferred_rect
     cast_ctr = 0
-    while spell_rect is not None and cast_ctr < SPELL_COINS_CAST_TIMES_LIMIT:
+    while spell_rect is not None and cast_ctr < max_casts:
         click_empty_box(empty_box_rect)
         adb_utils.tap(*math_utils.get_rand_click_point(spell_rect))
         # wait for the range to appear
@@ -104,8 +104,11 @@ def cast_spell_coins_repeatedly(empty_box_rect):
         # or we're picking for the first time this call (will be None, causing the "not in" check to succeed),
         # randomly choose a new guy.
         # Else, stick to the same guy
-        if chosen_rect not in rects:
+        if chosen_rect is None:
             chosen_rect = random.choice(rects)
+        elif chosen_rect not in rects:
+            chosen_rect = min(rects,
+                              key=lambda rect: math_utils.euclidean(rect[0], rect[1], chosen_rect[0], chosen_rect[1]))
 
         adb_utils.tap(*math_utils.get_rand_click_point(chosen_rect))
         adb_utils.tap(*math_utils.get_rand_click_point(chosen_rect))
@@ -114,7 +117,7 @@ def cast_spell_coins_repeatedly(empty_box_rect):
         # wait for the spell to be cast
         time.sleep(2)
 
-    return cast_ctr > 0
+    return cast_ctr > 0, chosen_rect
 
 
 def cast_spell_living_bag(empty_box_rect):
@@ -235,7 +238,7 @@ def cancel_fight_dialog():
             print("ERROR: CAN'T FIND EMPTY BOX!!!!", file=sys.stderr)
 
 
-def attempt_attack():
+def attempt_attack(monster_attack_names: list):
     """
     :return: True if it was able to begin a fight (takes you to the screen where you press "Ready"), False if it
     was unable to start a fight with the prescribed conditions (monster limit) within the prescribed number of retires
@@ -260,17 +263,24 @@ def attempt_attack():
         # 1. fetch image and find tofus
         sc_img = image_utils.fetch_screenshot(height=image_utils.ORIG_HEIGHT, width=image_utils.ORIG_WIDTH,
                                               temp_fname=names.LARGE_TEMP_SCREENSHOT_FNAME, color=True)
-        tofu_rects = image_utils.get_monster_pos(sc_img, monster_name=names.get_monster_name(names.MONSTER_TOFU_INDEX),
-                                                 threshold=image_utils.THRESH_TOFU_POS)
-        if tofu_rects is None:
+
+        all_monster_rects = []
+        for monster_name in monster_attack_names:
+            monster_rects = image_utils.get_monster_pos(sc_img,
+                                                        monster_name=monster_name,
+                                                        threshold=image_utils.THRESH_TOFU_POS)
+            if monster_rects is not None:
+                all_monster_rects.extend(monster_rects)
+
+        if len(all_monster_rects) == 0:
             no_monster_ctr += 1
             print("Found no monsters!", file=sys.stderr)
             continue
 
-        print("Found monsters:", len(tofu_rects))
+        print("Found monsters:", len(all_monster_rects))
 
         # 2. fetch random click points, if they're not too close to a miss
-        click_pts = [math_utils.get_rand_click_point(rect) for rect in tofu_rects]
+        click_pts = [math_utils.get_rand_click_point(rect) for rect in all_monster_rects]
         click_pts = [pt for pt in click_pts if MAP_X_START_LIMIT <= pt[0] <= MAP_X_END_LIMIT
                      and MAP_Y_START_LIMIT < pt[1] < MAP_Y_END_LIMIT
                      and min([100] + [math_utils.euclidean(*pt, *miss_pt) for miss_pt in missed_clicks])

@@ -24,6 +24,7 @@ assert ORIG_WIDTH / READ_WIDTH == ORIG_HEIGHT / READ_HEIGHT
 THRESH_EMPTY_BOX = 0.8
 THRESH_CLOSE_DIAG_BTN = 0.9
 THRESH_HEALTH_FULL = 0.9
+THRESH_ZAAP = 0.9
 
 THRESH_ATTACK_DIAG_PLUS = 0.7
 THRESH_ATTACK_DIAG_ATT = 0.6
@@ -38,6 +39,7 @@ THRESH_BATTLE_SPELL_COINS = 0.9  # because of the red dot that appears in the em
 THRESH_BATTLE_SPELL_LIVING_BAG = 0.9  # because of the red dot that appears in the emulator
 THRESH_BATTLE_IN_RANGE_2 = 0.6
 THRESH_BATTLE_IN_RANGE_3 = 0.8
+THRESH_BATTLE_IN_RANGE_RIGHT = 0.55
 THRESH_BATTLE_SPELL_RANGE_SQ = 0.8
 THRESH_BATTLE_ENEMY_POS = 0.8
 THRESH_BATTLE_MOVE_SQUARE = 0.8
@@ -72,6 +74,7 @@ monster_image_dict = {}
 empty_box_img = read_image(names.EMPTY_BOX_FNAME)
 close_diag_btn_img = read_image(names.CLOSE_DIAG_BTN_FNAME, color=True)
 health_full_img = read_image(names.HEALTH_FULL_FNAME, color=True)
+zaap_img = read_image(names.ZAAP_IMG_FNAME, color=True)
 
 attack_diag_att_img = read_image(names.ATTACK_DIAG_ATTACK_FNAME)
 attack_diag_cancel_img = read_image(names.ATTACK_DIAG_CANCEL_FNAME)
@@ -84,6 +87,7 @@ battle_spell_living_bag_img = read_image(fname=names.BATTLE_SPELL_LIVING_BAG_FNA
 battle_in_range_sig_2_img = read_image(fname=names.BATTLE_IN_RANGE_SIG_2_FNAME, color=True)
 battle_in_range_sig_3_img = read_image(fname=names.BATTLE_IN_RANGE_SIG_3_FNAME, color=True)
 battle_in_range_sig_4_img = read_image(fname=names.BATTLE_IN_RANGE_SIG_4_FNAME, color=True)
+battle_in_range_sig_right_img = read_image(fname=names.BATTLE_IN_RANGE_SIG_RIGHT_FNAME, color=True)
 battle_spell_range_sq_sig = read_image(fname=names.BATTLE_SPELL_RANGE_SQ_SIG_FNAME, color=True)
 battle_enemy_pos_sig_img = read_image(fname=names.BATTLE_ENEMY_POS_SIG_FNAME, color=True)
 battle_move_sig = read_image(fname=names.BATTLE_MOVE_SQUARE_FNAME, color=True)
@@ -363,19 +367,19 @@ def get_spell_in_range_rects(cv_img=None):
     # stored in the np array as BGR
     bgr_blue = [178, 67, 73]
     cv_img_blue = get_filtered_image(cv_img=cv_img_orred, bgr_lower=bgr_blue, bgr_upper=bgr_blue)
-    # cv2.imwrite("blue.png", cv_img_blue)
-
-    # cv2.imwrite("debug3.png", cv_img_blue)
+    cv2.imwrite("blue.png", cv_img_blue)
 
     matches_sig2 = get_template_match(main_cv_img=cv_img_blue, template_cv_image=battle_in_range_sig_2_img,
                                       threshold=THRESH_BATTLE_IN_RANGE_2, many=True, scale=True, default=[])
     matches_sig3 = get_template_match(main_cv_img=cv_img_blue, template_cv_image=battle_in_range_sig_3_img,
                                       threshold=THRESH_BATTLE_IN_RANGE_3, many=True, scale=True, default=[])
+    matches_sig2.extend(matches_sig3)
     matches_sig4 = get_template_match(main_cv_img=cv_img_blue, template_cv_image=battle_in_range_sig_4_img,
                                       threshold=THRESH_BATTLE_IN_RANGE_3, many=True, scale=True, default=[])
-
-    matches_sig2.extend(matches_sig3)
     matches_sig2.extend(matches_sig4)
+    matches_sig_right = get_template_match(main_cv_img=cv_img_blue, template_cv_image=battle_in_range_sig_right_img,
+                                           threshold=THRESH_BATTLE_IN_RANGE_RIGHT, many=True, scale=True, default=[])
+    matches_sig2.extend(matches_sig_right)
 
     matches = math_utils.deduplicate_rects(matches_sig2)
 
@@ -444,6 +448,22 @@ def get_close_diag_btn(cv_img=None):
                                         threshold=THRESH_CLOSE_DIAG_BTN, scale=True)
 
     return close_btn_rect
+
+
+def is_astrub_zaap(cv_img=None):
+    """
+    Returns False if no astrub zaap detected, else returns True
+    :param cv_img:
+    :return:
+    """
+    if cv_img is None:
+        cv_img = fetch_screenshot(height=ORIG_HEIGHT, width=ORIG_WIDTH, color=True,
+                                  temp_fname=names.LARGE_TEMP_SCREENSHOT_FNAME)
+
+    zaap_rect = get_template_match(main_cv_img=cv_img, template_cv_image=zaap_img, many=False,
+                                   threshold=THRESH_ZAAP, scale=True)
+
+    return zaap_rect is not None
 
 
 def init():
