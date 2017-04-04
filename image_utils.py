@@ -32,7 +32,7 @@ THRESH_ATTACK_DIAG_CANCEL = 0.6
 
 THRESH_TOFU_POS = 0.83
 
-THRESH_BATTLE_AVATAR = 0.8
+THRESH_BATTLE_AVATAR = 0.7
 THRESH_BATTLE_END_TURN = 0.9
 THRESH_BATTLE_READY = 0.9
 THRESH_BATTLE_SPELL_COINS = 0.9  # because of the red dot that appears in the emulator
@@ -42,6 +42,8 @@ THRESH_BATTLE_IN_RANGE_3 = 0.8
 THRESH_BATTLE_IN_RANGE_RIGHT = 0.55
 THRESH_BATTLE_SPELL_RANGE_SQ = 0.8
 THRESH_BATTLE_ENEMY_POS = 0.8
+THRESH_BATTLE_OWN_POS = 0.8
+THRESH_BATTLE_AVATAR_PLUS = 0.7
 THRESH_BATTLE_MOVE_SQUARE = 0.8
 
 
@@ -90,6 +92,7 @@ battle_in_range_sig_4_img = read_image(fname=names.BATTLE_IN_RANGE_SIG_4_FNAME, 
 battle_in_range_sig_right_img = read_image(fname=names.BATTLE_IN_RANGE_SIG_RIGHT_FNAME, color=True)
 battle_spell_range_sq_sig = read_image(fname=names.BATTLE_SPELL_RANGE_SQ_SIG_FNAME, color=True)
 battle_enemy_pos_sig_img = read_image(fname=names.BATTLE_ENEMY_POS_SIG_FNAME, color=True)
+battle_avatar_plus_img = read_image(fname=names.BATTLE_AVATAR_PLUS_FNAME, color=True)
 battle_move_sig = read_image(fname=names.BATTLE_MOVE_SQUARE_FNAME, color=True)
 
 battle_avatar_image_dict = {name: read_image(fname=fname, color=True)
@@ -99,14 +102,9 @@ battle_avatar_image_dict = {name: read_image(fname=fname, color=True)
 def fetch_screenshot(height: int, width: int, temp_fname: str, color: bool):
     while True:
         try:
-            subprocess.call("adb exec-out screencap -p  2> /dev/null > %s" % temp_fname, shell=True,
-                            timeout=adb_utils.ADB_TIMEOUT_SECONDS)
-            # this is to prevent the error where adb freezes up for some reason and then fails
-            try:
-                read_image(fname=temp_fname, color=False)
+            if subprocess.call("adb exec-out screencap -p  2> /dev/null > %s" % temp_fname, shell=True,
+                               timeout=adb_utils.ADB_TIMEOUT_SECONDS) == 0:
                 break
-            except Exception:
-                continue
         except Exception:
             print("ADB TIMED OUT!!!! :O :O :O at", time.time(), "- trying again!", file=sys.stderr)
     subprocess.call("sips -z %d %d %s" % (height, width, temp_fname), shell=True)
@@ -279,7 +277,12 @@ def get_end_turn_if_is_turn(cv_img=None):
                                        many=False,
                                        scale=True)
 
-    return end_turn_rect
+    # this is to restrict the random click to click on ready even if the ready button has moved to the left e.g.
+    # due to monster death
+    if end_turn_rect is None:
+        return None
+    return end_turn_rect[0], end_turn_rect[1], end_turn_rect[0] + (end_turn_rect[2] - end_turn_rect[0]) // 2, \
+           end_turn_rect[3]
 
 
 def get_ready_button_if_battle(cv_img=None):
@@ -418,6 +421,26 @@ def get_battle_enemy_positions(cv_img=None):
                                  threshold=THRESH_BATTLE_ENEMY_POS, many=True, scale=True, default=None)
 
     return matches
+
+
+def get_battle_own_pos(cv_img=None):
+    if cv_img is None:
+        cv_img = fetch_screenshot(height=ORIG_HEIGHT, width=ORIG_WIDTH, color=True,
+                                  temp_fname=names.LARGE_TEMP_SCREENSHOT_FNAME)
+
+    matches = get_monster_pos(cv_img=cv_img, monster_name=names.MONSTER_SELF_NAME,
+                              threshold=THRESH_BATTLE_OWN_POS)
+
+    return random.choice(matches)
+
+
+def get_battle_avatar_plus(cv_img=None):
+    if cv_img is None:
+        cv_img = fetch_screenshot(height=ORIG_HEIGHT, width=ORIG_WIDTH, color=True,
+                                  temp_fname=names.LARGE_TEMP_SCREENSHOT_FNAME)
+
+    return get_template_match(main_cv_img=cv_img, template_cv_image=battle_avatar_plus_img,
+                              threshold=THRESH_BATTLE_AVATAR_PLUS, many=False, scale=True, default=None)
 
 
 def get_health_full_rect(cv_img=None):

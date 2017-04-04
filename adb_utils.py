@@ -3,7 +3,7 @@ import random
 import time
 import sys
 
-_TAP_DURATION_MS = 200
+_TAP_DURATION_MS = 50
 MOVE_SWIPE_DURATION_MS = 350
 
 ADB_TIMEOUT_SECONDS = 5

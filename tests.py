@@ -30,6 +30,18 @@ def draw_open_rects(rects, cv_img, op_fname: str, divide_by: float):
     subprocess.call("open " + op_fname, shell=True)
 
 
+def test_get_own_pos(fname: str):
+    color_img = image_utils.read_image(fname=fname, color=True)
+    draw_open_rects(rects=[image_utils.get_battle_own_pos(color_img)], cv_img=color_img, divide_by=1,
+                    op_fname="test_op/own_pos.png")
+
+
+def test_battle_plus(fname: str):
+    color_img = image_utils.read_image(fname=fname, color=True)
+    draw_open_rects(rects=[image_utils.get_battle_avatar_plus(color_img)], cv_img=color_img, divide_by=1,
+                    op_fname="avatar_plus.png")
+
+
 def test_in_range(fname: str):
     color_img = image_utils.read_image(fname=fname, color=True)
     draw_open_rects(rects=image_utils.get_spell_in_range_rects(color_img), cv_img=color_img, divide_by=1,
@@ -235,9 +247,10 @@ def main():
         # test_end_turn_detect(img_fname="test_files/battle_screen_2_attack_range.png")
         # test_end_turn_detect(img_fname=normal_image_lg)
         # test_movement(fname=movement_img)
-        test_in_range(battle_range_img)
+        # test_in_range(battle_range_img)
         # test_spell_range_empty_squares(battle_range_img)
-
+        test_battle_plus(movement_img)
+        # test_get_own_pos(movement_img)
 
 if __name__ == '__main__':
     main()

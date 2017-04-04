@@ -48,10 +48,48 @@ def click_empty_box(empty_box_rect):
     adb_utils.tap(*math_utils.get_rand_click_point(empty_box_rect))
 
 
+def battle_move_avatar_box_away():
+    cv_img = image_utils.fetch_screenshot(height=image_utils.ORIG_HEIGHT, width=image_utils.ORIG_WIDTH,
+                                          temp_fname=names.LARGE_TEMP_SCREENSHOT_FNAME, color=True)
+    own_pos_rect = image_utils.get_battle_own_pos(cv_img)
+    # TODO: This will not scale well to a different screen size
+    battle_height = image_utils.ORIG_HEIGHT
+    battle_width = image_utils.ORIG_WIDTH * 7 / 8
+    quad_tl = ((0, 0), (battle_width / 2, battle_height / 2))
+    quad_tr = ((battle_width / 2, 0), (battle_width, battle_height / 2))
+    quad_bl = ((0, battle_height / 2), (battle_width / 2, battle_height))
+    quad_br = ((battle_width / 2, battle_height / 2), (battle_width, battle_height))
+
+    quad_map = {
+        quad_tl: (battle_width, battle_height),
+        quad_bl: (battle_width, 0),
+        quad_tr: (0, battle_height),
+        quad_br: (0, 0)
+    }
+
+    def get_quad(own_pos_pt):
+        for quad in quad_map.keys():
+            if quad[0][0] <= own_pos_pt[0] <= quad[1][0] and quad[0][1] <= own_pos_pt[1] <= quad[1][1]:
+                return quad
+        # this happens since we haven't divided the quads perfects i.e they cover all
+        return random.choice(list(quad_map.keys()))
+
+    pt_to_move = quad_map[get_quad((own_pos_rect[0], own_pos_rect[1]))] if own_pos_rect is not None \
+        else random.choice(list(quad_map.items()))
+
+    battle_avatar_plus = image_utils.get_battle_avatar_plus(cv_img)
+
+    if battle_avatar_plus is None:
+        return False
+
+    adb_utils.swipe(*math_utils.get_rand_click_point(battle_avatar_plus), *pt_to_move)
+    return True
+
+
 def battle_move_away_from_enemy(empty_box_rect):
     click_empty_box(empty_box_rect)
     # to let the green squares form properly
-    time.sleep(0.5)
+    time.sleep(1)
     cv_sc = image_utils.fetch_screenshot(height=image_utils.ORIG_HEIGHT, width=image_utils.ORIG_WIDTH,
                                          color=True, temp_fname=names.LARGE_TEMP_SCREENSHOT_FNAME)
     move_sq_rects = image_utils.get_battle_movement_squares(cv_img=cv_sc)
@@ -71,8 +109,8 @@ def battle_move_away_from_enemy(empty_box_rect):
         chosen_move_pt = math_utils.get_max_min_dist_pt(choose_pt_list=move_click_pts, far_from_pt_list=enemy_pos_pts)
 
     adb_utils.tap(*chosen_move_pt)
-    adb_utils.tap(*chosen_move_pt)
-    click_empty_box(empty_box_rect)
+    # adb_utils.tap(*chosen_move_pt) # not necessary as we made it one click cast
+    # click_empty_box(empty_box_rect)
 
     return True
 
@@ -92,8 +130,11 @@ def cast_spell_coins_repeatedly(empty_box_rect, max_casts: int, preferred_rect: 
     while spell_rect is not None and cast_ctr < max_casts:
         click_empty_box(empty_box_rect)
         adb_utils.tap(*math_utils.get_rand_click_point(spell_rect))
-        # wait for the range to appear
-        time.sleep(1)
+        # wait for the range to appear, any previously killed enemies to disappear
+        if cast_ctr == 0:
+            time.sleep(1.3)
+        else:
+            time.sleep(1.3)
         rects = image_utils.get_spell_in_range_rects()
         # if no one is in range, pass your turn
         if rects is None:
@@ -111,11 +152,12 @@ def cast_spell_coins_repeatedly(empty_box_rect, max_casts: int, preferred_rect: 
                               key=lambda rect: math_utils.euclidean(rect[0], rect[1], chosen_rect[0], chosen_rect[1]))
 
         adb_utils.tap(*math_utils.get_rand_click_point(chosen_rect))
-        adb_utils.tap(*math_utils.get_rand_click_point(chosen_rect))
+        # adb_utils.tap(*math_utils.get_rand_click_point(chosen_rect)) # one click tap, hence unnecessary
         cast_ctr += 1
 
         # wait for the spell to be cast
-        time.sleep(2)
+        # time.sleep(0.1)  # immediate casting enabled in options so no need to wait too long, but we still need to wait
+        # otherwise issues with monster damage animation and casting on dead monster square
 
     return cast_ctr > 0, chosen_rect
 
@@ -142,7 +184,7 @@ def cast_spell_living_bag(empty_box_rect):
 
     click_pt = math_utils.get_min_avg_dist_pt([math_utils.get_rand_click_point(rect) for rect in rects])
     adb_utils.tap(*click_pt)
-    adb_utils.tap(*click_pt)
+    # adb_utils.tap(*click_pt) # one click tap, hence unnecessary
     return True
 
 
@@ -254,7 +296,9 @@ def attempt_attack(monster_attack_names: list):
     monster_click_missed_limit = random.randint(MIN_ATTACK_NOT_FOUND, MAX_ATTACK_NOT_FOUND)
     missed_clicks = []
 
-    empty_box_rect = image_utils.get_empty_box_pos(many=False)
+    empty_box_rect = None
+    while empty_box_rect is None:
+        empty_box_rect = image_utils.get_empty_box_pos(many=False)
     click_empty_box(empty_box_rect)
 
     while len(denied_clicks) < deny_limit and no_monster_ctr < no_monster_limit \

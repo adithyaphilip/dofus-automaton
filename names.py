@@ -4,16 +4,19 @@ OWN_NAME = "me"
 MONSTER_TOFU_NAME = "tofu"
 MONSTER_BLACK_GOB_NAME = "black_gob"
 MONSTER_WHITE_GOB_NAME = "white_gob"
+MONSTER_GOB_NAME = "gobbal"
 MONSTER_ARACH_NAME = "arachnee"
 MONSTER_MOSQUITO_NAME = "mosquito"
 MONSTER_GR_LARV_NAME = "green_larvae"
 MONSTER_BL_LARV_NAME = "blue_larvae"
 MONSTER_OR_LARV_NAME = "orange_larvae"
+MONSTER_SELF_NAME = "enutrof"
 
 # list of monsters for whom we have pos images to identify and start fights with
-MONSTER_NAME_LIST = [MONSTER_TOFU_NAME, MONSTER_BLACK_GOB_NAME, MONSTER_WHITE_GOB_NAME]
+MONSTER_NAME_LIST = [MONSTER_TOFU_NAME, MONSTER_BLACK_GOB_NAME, MONSTER_WHITE_GOB_NAME, MONSTER_GOB_NAME,
+                     MONSTER_SELF_NAME]
 
-_ROOT_DIR = "/Users/aphilip/projects/dofus_automaton"
+_ROOT_DIR = "/Users/aphilip/projects/dofus_automaton/python"
 
 _POS_DIR = "pos"
 _POS_FORMATS = [_POS_DIR + "/%s" + postfix for postfix in ["_tl_large.png", "_tr_large.png", "_bl_large.png",
@@ -36,6 +39,7 @@ BATTLE_IN_RANGE_SIG_4_FNAME = _POS_DIR + "/battle_in_range_sig4.png"
 BATTLE_IN_RANGE_SIG_RIGHT_FNAME = _POS_DIR + "/battle_in_range_sig_right.png"
 BATTLE_SPELL_RANGE_SQ_SIG_FNAME = _POS_DIR + "/battle_spell_range_sq_sig.png"
 BATTLE_ENEMY_POS_SIG_FNAME = _POS_DIR + "/battle_enemy_pos_sig.png"
+BATTLE_AVATAR_PLUS_FNAME = _POS_DIR + "/battle_avatar_plus.png"
 BATTLE_MOVE_SQUARE_FNAME = _POS_DIR + "/movement_sig.png"
 BATTLE_SPELL_COINS_ENABLED_FNAME = _POS_DIR + "/spell_coins.png"
 BATTLE_SPELL_LIVING_BAG_FNAME = _POS_DIR + "/spell_living_bag.png"

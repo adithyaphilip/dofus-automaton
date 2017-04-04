@@ -19,7 +19,8 @@ SPELL_LIVING_BAG_AP = 2
 
 
 class Game:
-    _SKIP_COORDS = [(7, -12), (7, -10)]
+    # (8, -16)
+    _SKIP_COORDS = [(7, -12), (7, -10), (8, -22), (8, -14)]
 
     def __init__(self, x, y, min_x, max_x, min_y, max_y):
         self._x = x
@@ -43,7 +44,8 @@ class Game:
 
         if len(possible_pts) == 0:
             self._visited = [(self._x, self._y)]
-            possible_pts = {pt for pt in (up, right, left, down) if pt not in self._visited}
+            possible_pts = {pt for pt in (up, right, left, down) if pt not in self._visited
+                            and pt not in Game._SKIP_COORDS}
 
         # if for some reason it's still not resolved we're stuck
         if len(possible_pts) == 0:
@@ -67,19 +69,19 @@ class Game:
             interaction_utils.move_with_confirmation(interaction_utils.DIR_UP)
 
     def go_hunting_grounds_from_zaap(self):
-        moves = [interaction_utils.DIR_DOWN] * 4
+        # moves = [interaction_utils.DIR_DOWN] * 4
+        # for move in moves:
+        #     interaction_utils.move_with_confirmation(move)
+        #
+        # # this is a special movement down to go on left side of gate
+        # adb_utils.swipe(from_x=800, from_y=600, to_x=810, to_y=400)
+        # time.sleep(random.randint(interaction_utils.MOVE_SLEEP_MIN, interaction_utils.MOVE_SLEEP_MAX))
+
+        moves = [interaction_utils.DIR_RIGHT] * 4
         for move in moves:
             interaction_utils.move_with_confirmation(move)
-
-        # this is a special movement down to go on left side of gate
-        adb_utils.swipe(from_x=800, from_y=600, to_x=810, to_y=400)
-        time.sleep(random.randint(interaction_utils.MOVE_SLEEP_MIN, interaction_utils.MOVE_SLEEP_MAX))
-
-        moves = [interaction_utils.DIR_DOWN]
-        for move in moves:
-            interaction_utils.move_with_confirmation(move)
-        self._x = 4
-        self._y = -13
+        self._x = 8
+        self._y = -19
 
 
 def handle_battle():
@@ -87,10 +89,14 @@ def handle_battle():
     Handles a battle from the start, including clicking the ready button and closing the victory dialog
     :return:
     """
+    # we don't break if ready is not clicked so we can run this function even in middle of a battle
     interaction_utils.click_ready(wait=True, timeout=5)
     t_battle_check = time.time()
     battle_needs_to_close = False
     print("Checking if battle!")
+
+    battle_sced = False
+    battle_avatar_window_adjusted = False
 
     spell_coins_miss_streak = 0
     turn_ctr = 0
@@ -100,6 +106,19 @@ def handle_battle():
 
     battle_avatars = image_utils.get_battle_info()
     while battle_avatars is not None:
+        if not battle_sced:
+            image_utils.fetch_screenshot(height=image_utils.ORIG_HEIGHT, width=image_utils.ORIG_WIDTH,
+                                         temp_fname="last_battle.png", color=True)
+            battle_sced = True
+
+        if not battle_avatar_window_adjusted:
+            print("Adjusting avatar box!", file=sys.stderr)
+            if interaction_utils.battle_move_avatar_box_away():
+                print("Successfully adjusted avatar box!", file=sys.stderr)
+                battle_avatar_window_adjusted = True
+            else:
+                print("ERROR: Could not detect plus for avatar box!", file=sys.stderr)
+
         if cv_empty_box_rect is None:
             cv_empty_box_rect = image_utils.get_empty_box_pos(many=False)
         battle_needs_to_close = True
@@ -146,13 +165,16 @@ def handle_battle():
 
             # End your turn. It is important to re-fetch. Death of enemy can change position.
             # Remove the wait as we accidentally end our own turn due to the delay during which our next turn
-            # would start
-            time.sleep(1.2)  # just give it enough time to adjust the box if an enemy died
+            # would start. Re-added the wait via the loop because otherwise we mess up movement which takes us to places
+            #  where we die
             end_turn_rect = image_utils.get_end_turn_if_is_turn()
-            if end_turn_rect is not None:
-                # if time.time() - turn_start_time < TURN_TIME_LIMIT_SECONDS:
-                adb_utils.tap(*math_utils.get_rand_click_point(end_turn_rect))
-                time.sleep(1)
+            end_turn_wait = 2
+            end_turn_wait_start = time.time()
+            while end_turn_rect is not None:
+                if time.time() - end_turn_wait_start >= end_turn_wait:
+                    adb_utils.tap(*math_utils.get_rand_click_point(end_turn_rect))
+                    break
+                end_turn_rect = image_utils.get_end_turn_if_is_turn()
 
         battle_avatars = image_utils.get_battle_info()
 
@@ -181,9 +203,9 @@ def start_automaton(start_x: int, start_y: int, attack_monster_names: list):
     # tofu corner
     # game = Game(x=start_x, y=start_y, min_x=2, min_y=-13, max_x=7, max_y=-10)
     # astrub down outskirts
-    game = Game(x=start_x, y=start_y, min_x=-3, min_y=-13, max_x=6, max_y=-13)
+    # game = Game(x=start_x, y=start_y, min_x=-3, min_y=-13, max_x=6, max_y=-13)
     # astrub right outskirts`
-    # game = Game(x=start_x, y=start_y, min_x=8, min_y=-23, max_x=8, max_y=-13)
+    game = Game(x=start_x, y=start_y, min_x=8, min_y=-23, max_x=8, max_y=-13)
 
     # game.go_battlefield()
     # return
@@ -201,7 +223,9 @@ def start_automaton(start_x: int, start_y: int, attack_monster_names: list):
 
         # check if we have died. If so, move to battlefield
         if image_utils.is_astrub_zaap():
-            print("Died at", time.time(), ":( Going to war again!")
+            print("Died at", time.time(), ":( Going to war again! But first let me heal.", file=sys.stderr)
+            interaction_utils.heal_fully()
+            print("Finished healing!", file=sys.stderr)
             game.go_hunting_grounds_from_zaap()
 
         # we have not been able to find a suitable fight on this map, move to the next
@@ -210,11 +234,12 @@ def start_automaton(start_x: int, start_y: int, attack_monster_names: list):
 
 
 def main():
+    # for move in [interaction_utils.DIR_LEFT] * 18:
+    #     interaction_utils.move_with_confirmation(move)
     # handle_battle()
     # return
-    start_automaton(start_x=1, start_y=-13,
-                    attack_monster_names=[names.MONSTER_TOFU_NAME, names.MONSTER_WHITE_GOB_NAME,
-                                          names.MONSTER_BLACK_GOB_NAME])
+    start_automaton(start_x=8, start_y=-22,
+                    attack_monster_names=[names.MONSTER_GOB_NAME])
 
 
 if __name__ == '__main__':
