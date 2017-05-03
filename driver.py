@@ -20,7 +20,7 @@ SPELL_LIVING_BAG_AP = 2
 
 class Game:
     # (8, -16)
-    _SKIP_COORDS = [(7, -12), (7, -10), (8, -22), (8, -14)]
+    _SKIP_COORDS = [(7, -12), (7, -10), (8, -22)]
 
     def __init__(self, x, y, min_x, max_x, min_y, max_y):
         self._x = x
@@ -58,6 +58,8 @@ class Game:
 
         self._visited.append(next_pt)
         self._x, self._y = next_pt
+
+        print("Moving to:", next_pt, file=sys.stderr)
 
         if next_pt == right:
             interaction_utils.move_with_confirmation(interaction_utils.DIR_RIGHT)
@@ -129,7 +131,6 @@ def handle_battle():
         end_turn_rect = image_utils.get_end_turn_if_is_turn()
         # if not your turn, try again
         if end_turn_rect is not None:
-            turn_start_time = time.time()
             # if you've reached here, it's your turn.
             turn_ctr += 1
             print("Our turn has begun!", turn_ctr, file=sys.stderr)
@@ -161,12 +162,19 @@ def handle_battle():
             if spell_coins_miss_streak >= 2 and names.MONSTER_TOFU_NAME in map(lambda x: x[0], battle_avatars):
                 interaction_utils.battle_move_away_from_enemy(cv_empty_box_rect)
             elif spell_coins_miss_streak >= 3:
+                if turn_ctr > 5:
+                    print("Can't find enemies! Moving avatar box again!", file=sys.stderr)
+                    if interaction_utils.battle_move_avatar_box_away():
+                        print("Moved avatar box successfully!", file=sys.stderr)
+                    else:
+                        print("Failed to detect avatar bix plus sign!", file=sys.stderr)
+
                 interaction_utils.battle_move_away_from_enemy(cv_empty_box_rect)
 
             # End your turn. It is important to re-fetch. Death of enemy can change position.
             # Remove the wait as we accidentally end our own turn due to the delay during which our next turn
             # would start. Re-added the wait via the loop because otherwise we mess up movement which takes us to places
-            #  where we die
+            # where we die
             end_turn_rect = image_utils.get_end_turn_if_is_turn()
             end_turn_wait = 2
             end_turn_wait_start = time.time()
@@ -176,11 +184,15 @@ def handle_battle():
                     break
                 end_turn_rect = image_utils.get_end_turn_if_is_turn()
 
-        battle_avatars = image_utils.get_battle_info()
+        battle_cv_img = image_utils.fetch_screenshot(height=image_utils.ORIG_HEIGHT, width=image_utils.ORIG_WIDTH,
+                                                     temp_fname="battle_proggress.png", color=True)
+        battle_avatars = image_utils.get_battle_info(battle_cv_img)
 
     # close the fight finished dialog box
     print("Closing fight dialog!")
     if battle_needs_to_close:
+        image_utils.fetch_screenshot(image_utils.ORIG_HEIGHT, image_utils.ORIG_WIDTH, color=True,
+                                     temp_fname="fight_fin_dialog.png")
         interaction_utils.close_diag(wait=True, timeout=5)
     # if there are any additional dialogs (e.g. level up), close them too
     print("Closing dialogs!")
@@ -238,7 +250,7 @@ def main():
     #     interaction_utils.move_with_confirmation(move)
     # handle_battle()
     # return
-    start_automaton(start_x=8, start_y=-22,
+    start_automaton(start_x=8, start_y=-18,
                     attack_monster_names=[names.MONSTER_GOB_NAME])
 
 

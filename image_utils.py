@@ -32,7 +32,7 @@ THRESH_ATTACK_DIAG_CANCEL = 0.6
 
 THRESH_TOFU_POS = 0.83
 
-THRESH_BATTLE_AVATAR = 0.7
+THRESH_BATTLE_AVATAR = 0.6
 THRESH_BATTLE_END_TURN = 0.9
 THRESH_BATTLE_READY = 0.9
 THRESH_BATTLE_SPELL_COINS = 0.9  # because of the red dot that appears in the emulator
@@ -42,8 +42,8 @@ THRESH_BATTLE_IN_RANGE_3 = 0.8
 THRESH_BATTLE_IN_RANGE_RIGHT = 0.55
 THRESH_BATTLE_SPELL_RANGE_SQ = 0.8
 THRESH_BATTLE_ENEMY_POS = 0.8
-THRESH_BATTLE_OWN_POS = 0.8
-THRESH_BATTLE_AVATAR_PLUS = 0.7
+THRESH_BATTLE_OWN_POS = 0.75
+THRESH_BATTLE_AVATAR_PLUS = 0.5
 THRESH_BATTLE_MOVE_SQUARE = 0.8
 
 
@@ -100,10 +100,10 @@ battle_avatar_image_dict = {name: read_image(fname=fname, color=True)
 
 
 def fetch_screenshot(height: int, width: int, temp_fname: str, color: bool):
+    cmd = adb_utils.get_base_cmd_exec() + " screencap -p  2> /dev/null > %s" % temp_fname
     while True:
         try:
-            if subprocess.call("adb exec-out screencap -p  2> /dev/null > %s" % temp_fname, shell=True,
-                               timeout=adb_utils.ADB_TIMEOUT_SECONDS) == 0:
+            if subprocess.call(cmd, shell=True, timeout=adb_utils.ADB_TIMEOUT_SECONDS) == 0:
                 break
         except Exception:
             print("ADB TIMED OUT!!!! :O :O :O at", time.time(), "- trying again!", file=sys.stderr)
@@ -430,6 +430,9 @@ def get_battle_own_pos(cv_img=None):
 
     matches = get_monster_pos(cv_img=cv_img, monster_name=names.MONSTER_SELF_NAME,
                               threshold=THRESH_BATTLE_OWN_POS)
+
+    if matches is None:
+        return None
 
     return random.choice(matches)
 

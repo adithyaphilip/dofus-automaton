@@ -55,7 +55,7 @@ def battle_move_avatar_box_away():
     # TODO: This will not scale well to a different screen size
     battle_height = image_utils.ORIG_HEIGHT
     battle_width = image_utils.ORIG_WIDTH * 7 / 8
-    quad_tl = ((0, 0), (battle_width / 2, battle_height / 2))
+    quad_tl = ((100, 100), (battle_width / 2, battle_height / 2))
     quad_tr = ((battle_width / 2, 0), (battle_width, battle_height / 2))
     quad_bl = ((0, battle_height / 2), (battle_width / 2, battle_height))
     quad_br = ((battle_width / 2, battle_height / 2), (battle_width, battle_height))
@@ -75,7 +75,7 @@ def battle_move_avatar_box_away():
         return random.choice(list(quad_map.keys()))
 
     pt_to_move = quad_map[get_quad((own_pos_rect[0], own_pos_rect[1]))] if own_pos_rect is not None \
-        else random.choice(list(quad_map.items()))
+        else random.choice(list(quad_map.values()))
 
     battle_avatar_plus = image_utils.get_battle_avatar_plus(cv_img)
 
@@ -83,6 +83,9 @@ def battle_move_avatar_box_away():
         return False
 
     adb_utils.swipe(*math_utils.get_rand_click_point(battle_avatar_plus), *pt_to_move)
+    empty_box = image_utils.get_empty_box_pos()
+    if empty_box is not None:
+        adb_utils.tap(*math_utils.get_rand_click_point(empty_box))
     return True
 
 
