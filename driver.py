@@ -250,7 +250,7 @@ def main():
     #     interaction_utils.move_with_confirmation(move)
     # handle_battle()
     # return
-    start_automaton(start_x=8, start_y=-18,
+    start_automaton(start_x=8, start_y=-19,
                     attack_monster_names=[names.MONSTER_GOB_NAME])
 
 
